@@ -47,13 +47,12 @@ _abs_start:
     .cfi_undefined ra
 
     #ifdef SMODE
-    csrw sie, 0     // interrupt disable 
+    csrw sie, 0     // interrupt disable
     csrw sip, 0     // no pending interrupts
     #else
     csrw mie, 0
     csrw mip, 0
     #endif
-    
 
     li  x1, 0
     li  x2, 0
@@ -93,14 +92,16 @@ _abs_start:
     #ifdef SMODE
     // there is no equivalent of mhartid in supervisor mode.
     // instead, the hartid is passed as paramter by SMODE
-    mv t2, a0   
-    #else 
+    mv t2, a0
+    #else
     csrr t2, mhartid
     #endif
     lui t0, %hi(_max_hart_id)
     add t0, t0, %lo(_max_hart_id)
-    bgtu t2, t0, abort
-
+    bleu t2, t0, 1f
+    la t0, abort
+    jalr x0, 0(t0)
+1:
     // Allocate stacks
     la sp, _stack_start
     lui t0, %hi(_hart_stack_size)
@@ -108,14 +109,14 @@ _abs_start:
 #ifdef __riscv_mul
     mul t0, t2, t0
 #else
-    beqz t2, 2f  // Jump if single-hart
+    beqz t2, 3f  // Jump if single-hart
     mv t1, t2
     mv t3, t0
-1:
+2:
     add t0, t0, t3
     addi t1, t1, -1
-    bnez t1, 1b
-2:
+    bnez t1, 2b
+3:
 #endif
     sub sp, sp, t0
 
